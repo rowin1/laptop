@@ -1,0 +1,37 @@
+#!/bin/sh
+
+fancy_echo() {
+  local fmt="$1"; shift
+
+  # shellcheck disable=SC2059
+  printf "\\n$fmt\\n" "$@"
+}
+
+less_fancy_echo() {
+  printf "%b\n" "$1"
+}
+
+fancy_echo "Configuring git user..."
+less_fancy_echo "Enter full name:"
+read fullname
+less_fancy_echo "\nEnter email:"
+read email
+
+git config --global user.name "$fullname"
+git config --global user.email $email
+
+less_fancy_echo "\nPress enter after being prompted for file"
+less_fancy_echo "Please skip entering a passphrase (or alternatively follow more instructions here: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/working-with-ssh-key-passphrases)\n"
+ssh-keygen -t ed25519 -C "$email"
+
+pbcopy < ~/.ssh/id_ed25519.pub
+less_fancy_echo "\nGenerated SSH key is now copied to clipboard."
+less_fancy_echo "\nPlease navigate to https://github.com/settings/keys and add the generated SSH key.\n"
+
+echo "Did you finish adding your SSH key to Github?"
+select yn in "Yes" "No"; do
+    case $yn in
+        Yes ) cd; cd Workspace; less_fancy_echo "\nCloning Seed Core, My Seed Live, and Seed Admin into Workspace..."; git clone git@github.com:seed-health/seed_core.git; git clone git@github.com:seed-health/my-seed-live.git; git clone git@github.com:seed-health/seed-admin-app.git; break;;
+        No ) exit;;
+    esac
+done
