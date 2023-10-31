@@ -144,6 +144,9 @@ fancy_echo "Initialize SSH ..."
     ssh-keygen -f ~/.ssh/id_rsa -t rsa -N ''
   fi
 
+fancy_echo "installing nvm"
+sh -c "$(curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh)"
+
 fancy_echo "installing extra tools"
 brew bundle --file=- <<EOF
 brew "bat"
@@ -153,7 +156,6 @@ brew "fd"
 brew "fzf"
 brew "htop"
 brew "neovim"
-brew "puma/puma/puma-dev"
 brew "ripgrep"
 brew "tldr"
 cask "caffeine"
@@ -164,10 +166,6 @@ cask "rectangle"
 cask "textmate"
 cask "visual-studio-code"
 EOF
-
-# fancy_echo "setting up puma-dev"
-# sudo puma-dev -setup
-# puma-dev -install -d local
 
 fancy_echo "configuring diff-so-fancy"
 git config --global core.pager "diff-so-fancy | less --tabs=4 -RFX"
@@ -197,21 +195,21 @@ BASE16_SHELL="$HOME/.config/base16-shell/"
 EOF
 
 fancy_echo "cloning dotfiles"
-mkdir -p code
-git_clone https://github.com/thoughtbot/dotfiles.git ~/code/dotfiles
-git_clone https://github.com/ryanong/vim-bootstrap.git ~/code/vim-bootstrap
+mkdir -p Workspace
+git_clone https://github.com/thoughtbot/dotfiles.git ~/Workspace/dotfiles
+git_clone https://github.com/ryanong/vim-bootstrap.git ~/Workspace/vim-bootstrap
 
 fancy_echo "writing rcm settings"
 cat <<EOF > "$HOME/.rcrc"
 EXCLUDES="README*.md LICENSE zsh* rcrc Brewfile vimrc.bundles vim/* init.vim"
-DOTFILES_DIRS="$HOME/code/vim-bootstrap $HOME/code/dotfiles"
+DOTFILES_DIRS="$HOME/Workspace/vim-bootstrap $HOME/Workspace/dotfiles"
 EOF
 
 fancy_echo "running rcup"
 rcup -K
 
 fancy_echo "installing vim plugins "
-sh ~/code/vim-bootstrap/hooks/post-up
+sh ~/Workspace/vim-bootstrap/hooks/post-up
 
 touch "$HOME"/.psqlrc.local
 
