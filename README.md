@@ -10,6 +10,8 @@ Read, then run the script:
 
 ```sh
 bash <(curl -s https://raw.githubusercontent.com/rowin1/laptop/master/mac)
+
+bash <(curl -s https://raw.githubusercontent.com/rowin1/laptop/master/github)
 ```
 
 ## What it sets up
