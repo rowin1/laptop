@@ -48,6 +48,10 @@ fancy_echo "Setting OSX settings ..."
   # Set a really fast key repeat.
   defaults write NSGlobalDomain KeyRepeat -int 1
 
+  # Create and set screenshot location
+  mkdir ~/Documents/Screenshots
+  defaults write com.apple.screencapture location ~/Documents/Screenshots
+
   # Disable auto-correct
   defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 
