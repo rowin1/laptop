@@ -11,7 +11,7 @@ Read, then run the script:
 ```sh
 bash <(curl -s https://raw.githubusercontent.com/rowin1/laptop/master/mac)
 
-bash <(curl -s https://raw.githubusercontent.com/rowin1/laptop/master/github)
+bash <(curl -s https://raw.githubusercontent.com/rowin1/laptop/master/git)
 ```
 
 ## What it sets up
