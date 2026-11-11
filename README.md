@@ -7,7 +7,9 @@ development. It's safe to re-run: steps that are already done are skipped.
 
 ### 1. Before running anything
 
-1. Install [Firefox](https://www.mozilla.org/firefox/) using Safari.
+1. Install [Firefox](https://www.mozilla.org/firefox/) using Safari. (The
+   `mac` script also installs Firefox and takes over this copy, so Homebrew
+   keeps it up to date from then on.)
 2. Log in to your work email in Firefox.
 3. Log in to [Claude](https://claude.ai) in Firefox.
 4. Ask Claude to review [`mac`](mac) with you and update anything that's out of
@@ -59,7 +61,7 @@ VS Code profile by hand any more. The `mac` script does it (see below).
 * Claude Code
 * Xcode (via xcodes) and the iOS Simulator
 * git, gh, diff-so-fancy, neovim, ripgrep, fd, fzf, bat, eza, tmux and more
-* apps: caffeine, docker, iterm2, itsycal, linearmouse, rectangle, slack, textmate, visual studio code
+* apps: caffeine, docker, firefox, iterm2, itsycal, linearmouse, rectangle, slack, textmate, visual studio code
 * https://github.com/thoughtbot/dotfiles and https://github.com/ryanong/vim-bootstrap (via rcm)
 * files from this repo:
   * `.gitconfig` → `~/.gitconfig` (machine-specific settings go in `~/.gitconfig.local`)
