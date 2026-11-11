@@ -1,1 +1,1 @@
-Disable pointer acceleration in LinearMouse for all devices (mouse and trackpad).
+Disable mouse acceleration in linearmouse.
