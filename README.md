@@ -29,7 +29,7 @@ bash <(curl -s https://raw.githubusercontent.com/rowin1/laptop/master/git)
   * `.gitconfig` → `~/.gitconfig` (machine-specific settings go in `~/.gitconfig.local`)
   * `Doom.itermcolors` → an iTerm2 "Doom" profile, set as the default
   * `rowin1.code-profile` → VS Code settings and extensions
-  * `mouse.md` → LinearMouse config with pointer acceleration disabled
+  * `mouse.md` → LinearMouse config with pointer acceleration disabled for all devices
 
 ## Manual steps
 

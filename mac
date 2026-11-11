@@ -353,7 +353,7 @@ while ext=$(plutil -extract "$i.identifier.id" raw -o - "$vscode_tmp" 2>/dev/nul
 done
 rm -f "$vscode_tmp"
 
-fancy_echo "Disabling mouse acceleration in LinearMouse ..."
+fancy_echo "Disabling pointer acceleration (all devices) in LinearMouse ..."
 LINEARMOUSE_CONFIG="$HOME/.config/linearmouse/linearmouse.json"
 if [ ! -f "$LINEARMOUSE_CONFIG" ]; then
   mkdir -p "$(dirname "$LINEARMOUSE_CONFIG")"
@@ -361,7 +361,6 @@ if [ ! -f "$LINEARMOUSE_CONFIG" ]; then
 {
   "schemes": [
     {
-      "if": { "device": { "category": "mouse" } },
       "pointer": { "disableAcceleration": true }
     }
   ]
