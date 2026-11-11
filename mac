@@ -347,7 +347,7 @@ installed_extensions="$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:l
 i=0
 while ext=$(plutil -extract "$i.identifier.id" raw -o - "$vscode_tmp" 2>/dev/null); do
   if ! printf '%s\n' "$installed_extensions" | grep -qx "$(printf '%s' "$ext" | tr '[:upper:]' '[:lower:]')"; then
-    code --install-extension "$ext" --force > /dev/null || less_fancy_echo "... couldn't install $ext"
+    code --install-extension "$ext" --force > /dev/null 2>&1 || less_fancy_echo "... couldn't install $ext"
   fi
   i=$((i + 1))
 done
