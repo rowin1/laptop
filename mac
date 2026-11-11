@@ -1,8 +1,12 @@
-#!/bin/sh
+#!/bin/bash
+
+# Laptop setup: macOS settings, Homebrew, zsh, Node (fnm), Python (uv),
+# Claude Code, apps and dotfiles. Safe to re-run.
+
+PYTHON_VERSION="3.14"
 
 fancy_echo() {
   local fmt="$1"; shift
-
   # shellcheck disable=SC2059
   printf "\\n$fmt\\n" "$@"
 }
@@ -12,22 +16,24 @@ less_fancy_echo() {
 }
 
 git_clone() {
-  if [ ! -d $2 ]; then
-    git clone $1 $2
+  if [ ! -d "$2" ]; then
+    git clone "$1" "$2"
   else
     less_fancy_echo "... skip cloning $1, already cloned"
   fi
-
-  true
 }
 
-fancy_echo "Setting OSX settings ..."
+append_to_zshrc() {
+  if ! grep -Fqs "$1" "$HOME/.zshrc"; then
+    printf "\n%s\n" "$1" >> "$HOME/.zshrc"
+  fi
+}
 
-  # General UI/UX
-  #
+# ---------------------------------------------------------------------------
+fancy_echo "Setting macOS settings ..."
 
-  # Disable the sound effects on boot
-  sudo nvram SystemAudioVolume=%80
+  # Mute the startup chime
+  sudo nvram StartupMute=%01
 
   # Expand save panel by default
   defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
@@ -36,162 +42,238 @@ fancy_echo "Setting OSX settings ..."
   # Save to disk (not to iCloud) by default
   defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
 
-  # Disable the “Are you sure you want to open this application?” dialog
+  # Disable the "Are you sure you want to open this application?" dialog
   defaults write com.apple.LaunchServices LSQuarantine -bool false
 
-  # Trackpad, mouse, keyboard, Bluetooth accessories, and input
-  #
-
-  # Disable press-and-hold for keys in favour of key repeat.
+  # Disable press-and-hold for keys in favour of key repeat
   defaults write -g ApplePressAndHoldEnabled -bool false
 
-  # Set a really fast key repeat.
+  # Set a really fast key repeat
   defaults write NSGlobalDomain KeyRepeat -int 1
 
-  # Create and set screenshot location
-  mkdir ~/Documents/Screenshots
-  defaults write com.apple.screencapture location ~/Documents/Screenshots
+  # Turn off "natural" scrolling: two fingers down scrolls down
+  # (takes effect after logging out and back in)
+  defaults write NSGlobalDomain com.apple.swipescrolldirection -bool false
 
   # Disable auto-correct
   defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 
-  # Screen
-  #
+  # Screenshots: own folder, no window shadow
+  mkdir -p ~/Documents/Screenshots
+  defaults write com.apple.screencapture location ~/Documents/Screenshots
+  defaults write com.apple.screencapture disable-shadow -bool true
 
   # Require password immediately after sleep or screen saver begins
   defaults write com.apple.screensaver askForPassword -int 1
   defaults write com.apple.screensaver askForPasswordDelay -int 0
 
-  # Disable shadow in screenshots
-  defaults write com.apple.screencapture disable-shadow -bool true
-
-  # Dock
-  #
-
-  # Remove the auto-hiding Dock delay
-  defaults write com.apple.dock autohide-delay -float 0
-  # Reduce the animation when hiding/showing the Dock
-  defaults write com.apple.dock autohide-time-modifier -float 0.15
-
-  # Automatically hide and show the Dock
+  # Dock: auto-hide instantly, fast animation, translucent hidden apps
   defaults write com.apple.dock autohide -bool true
-
-  # Make Dock icons of hidden applications translucent
+  defaults write com.apple.dock autohide-delay -float 0
+  defaults write com.apple.dock autohide-time-modifier -float 0.15
   defaults write com.apple.dock showhidden -bool true
 
-  # Make Dock more transparent
-  defaults write com.apple.dock hide-mirror -bool true
-
   # Finder
-  #
-
-  # Set Desktop as the default location for new Finder windows
-  # For other paths, use `PfLo` and `file:///full/path/here/`
   defaults write com.apple.finder NewWindowTarget -string "PfDe"
   defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}/Desktop/"
-
-  # Finder: show hidden files by default
   defaults write com.apple.finder AppleShowAllFiles -bool true
-
-  # Finder: show all filename extensions
   defaults write NSGlobalDomain AppleShowAllExtensions -bool true
-
-  # Finder: show status bar
   defaults write com.apple.finder ShowStatusBar -bool true
-
-  # Finder: show path bar
   defaults write com.apple.finder ShowPathbar -bool true
-
-  # Finder: allow text selection in Quick Look
-  defaults write com.apple.finder QLEnableTextSelection -bool true
-
-  # Display full POSIX path as Finder window title
   defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
-
-  # When performing a search, search the current folder by default
   defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
-
-  # Disable the warning when changing a file extension
   defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
-
-  # Always open everything in Finder's column view.
-  # defaults write com.apple.Finder FXPreferredViewStyle clmv
   defaults write com.apple.finder FXPreferredViewStyle -string "clmv"
-
-  # Show the ~/Library folder.
   chflags nohidden ~/Library
 
-  # Time Machine
-  #
-
-  # Prevent Time Machine from prompting to use new hard drives as backup volume
+  # Time Machine: don't offer new disks for backup
   defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true
 
-less_fancy_echo "Restarting affected apps, some of these changes require a logout/restart ..."
-
-  for app in "cfprefsd" "Finder" "SystemUIServer"; do
+less_fancy_echo "Restarting affected apps, some changes need a logout/restart ..."
+  for app in "cfprefsd" "Dock" "Finder" "SystemUIServer"; do
     killall "${app}" > /dev/null 2>&1
   done
 
-
-fancy_echo "installing oh my zsh"
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-
-fancy_echo "install zeta theme"
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/skylerlee/zeta-zsh-theme/master/scripts/install.sh | sed 's:env zsh -l::g')"
-
-fancy_echo "starting thoughtbot laptop script"
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/thoughtbot/laptop/master/mac)"
-
-fancy_echo "Initialize SSH ..."
-  if [ ! -d ~/.ssh/ ]; then
-    ssh-keygen -f ~/.ssh/id_rsa -t rsa -N ''
+# ---------------------------------------------------------------------------
+if [ "$(uname -m)" = "arm64" ]; then
+  HOMEBREW_PREFIX="/opt/homebrew"
+  if ! pkgutil --pkg-info=com.apple.pkg.RosettaUpdateAuto > /dev/null 2>&1; then
+    fancy_echo "Installing Rosetta ..."
+    softwareupdate --install-rosetta --agree-to-license
   fi
+else
+  HOMEBREW_PREFIX="/usr/local"
+fi
 
-fancy_echo "installing nvm"
-sh -c "$(curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh)"
+if ! command -v brew > /dev/null; then
+  fancy_echo "Installing Homebrew (also installs Xcode Command Line Tools) ..."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+eval "$("$HOMEBREW_PREFIX"/bin/brew shellenv)"
 
-fancy_echo "installing extra tools"
+# ---------------------------------------------------------------------------
+# Oh My Zsh replaces ~/.zshrc, so it runs before anything is appended to it.
+# Check for oh-my-zsh.sh, not just the folder: a folder holding only
+# custom/themes (left by an earlier theme install) would otherwise skip this,
+# and the installer refuses to run when ~/.oh-my-zsh already exists.
+if [ ! -f "$HOME/.oh-my-zsh/oh-my-zsh.sh" ]; then
+  fancy_echo "Installing Oh My Zsh ..."
+  if [ -d "$HOME/.oh-my-zsh" ]; then
+    mv "$HOME/.oh-my-zsh" "$HOME/.oh-my-zsh.incomplete.$(date +%s)"
+  fi
+  RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+else
+  less_fancy_echo "... Oh My Zsh already installed"
+fi
+
+fancy_echo "Installing zeta theme ..."
+mkdir -p "$HOME/.oh-my-zsh/custom/themes"
+curl -fsSL https://raw.githubusercontent.com/skylerlee/zeta-zsh-theme/master/zeta.zsh-theme \
+  -o "$HOME/.oh-my-zsh/custom/themes/zeta.zsh-theme"
+sed -i '' 's/^ZSH_THEME=.*/ZSH_THEME="zeta"/' "$HOME/.zshrc"
+
+# ---------------------------------------------------------------------------
+fancy_echo "Installing Homebrew packages and apps ..."
+brew update
 brew bundle --file=- <<EOF
+tap "heroku/brew"
+
+# Shell and core tools
+brew "zsh"
+brew "git"
+brew "gh"
+brew "rcm"
+brew "tmux"
+brew "vim"
+brew "neovim"
+brew "universal-ctags"
+brew "openssl"
+brew "coreutils"
+brew "imagemagick"
+brew "heroku/brew/heroku", trusted: true
+
+# Language toolchains
+brew "fnm"
+brew "uv"
+
+# Command-line tools
 brew "bat"
 brew "diff-so-fancy"
-brew "exa"
+brew "eza"
 brew "fd"
 brew "fzf"
 brew "htop"
-brew "neovim"
 brew "ripgrep"
-brew "tldr"
+brew "tlrc"
+
+# Xcode installer (no App Store) + faster parallel downloads
+tap "xcodesorg/made"
+brew "xcodesorg/made/xcodes"
+brew "aria2"
+
+# Apps
 cask "caffeine"
 cask "docker"
 cask "iterm2"
 cask "itsycal"
 cask "linearmouse"
 cask "rectangle"
+cask "slack"
 cask "textmate"
 cask "visual-studio-code"
 EOF
 
-fancy_echo "configuring diff-so-fancy"
-git config --global core.pager "diff-so-fancy | less --tabs=4 -RFX"
-git config --global color.ui true
+# ---------------------------------------------------------------------------
+ZSH_PATH="$HOMEBREW_PREFIX/bin/zsh"
+if [ "$SHELL" != "$ZSH_PATH" ]; then
+  fancy_echo "Changing your shell to Homebrew's zsh ..."
+  grep -qx "$ZSH_PATH" /etc/shells || sudo sh -c "echo $ZSH_PATH >> /etc/shells"
+  sudo chsh -s "$ZSH_PATH" "$USER"
+fi
 
-git config --global color.diff-highlight.oldNormal    "red bold"
-git config --global color.diff-highlight.oldHighlight "red bold 52"
-git config --global color.diff-highlight.newNormal    "green bold"
-git config --global color.diff-highlight.newHighlight "green bold 22"
+fancy_echo "Configuring ~/.zshrc ..."
+mkdir -p "$HOME/.bin" "$HOME/.local/bin"
+# shellcheck disable=SC2016
+append_to_zshrc "eval \"\$($HOMEBREW_PREFIX/bin/brew shellenv)\""
+# shellcheck disable=SC2016
+append_to_zshrc 'export PATH="$HOME/.bin:$HOME/.local/bin:$PATH"'
+# shellcheck disable=SC2016
+append_to_zshrc 'eval "$(fnm env --use-on-cd --version-file-strategy=recursive --shell zsh)"'
 
-git config --global color.diff.meta       "11"
-git config --global color.diff.frag       "magenta bold"
-git config --global color.diff.commit     "yellow bold"
-git config --global color.diff.old        "red bold"
-git config --global color.diff.new        "green bold"
-git config --global color.diff.whitespace "red reverse"
+# ---------------------------------------------------------------------------
+fancy_echo "Installing Node (latest LTS) with fnm ..."
+eval "$(fnm env --shell bash)"
+fnm install --lts
+fnm use lts-latest
+npm install -g yarn
 
-fancy_echo "installing base16-shell"
+fancy_echo "Installing Python $PYTHON_VERSION with uv ..."
+export PATH="$HOME/.local/bin:$PATH"
+uv python install --default "$PYTHON_VERSION"
+
+fancy_echo "Installing Claude Code ..."
+if ! command -v claude > /dev/null; then
+  curl -fsSL https://claude.ai/install.sh | bash
+else
+  less_fancy_echo "... Claude Code already installed"
+fi
+
+# ---------------------------------------------------------------------------
+if [ -z "$(xcodes installed 2>/dev/null)" ]; then
+  fancy_echo "Installing the latest Xcode with xcodes ..."
+  less_fancy_echo "You'll be asked for your Apple ID, password and a 2FA code."
+  less_fancy_echo "This is a large download (several GB) and can take a while."
+  xcodes install --latest --select --experimental-unxip
+else
+  less_fancy_echo "... Xcode already installed"
+fi
+
+if [ -n "$(xcodes installed 2>/dev/null)" ]; then
+  fancy_echo "Setting up Xcode and the iOS Simulator ..."
+  sudo xcodebuild -license accept
+  sudo xcodebuild -runFirstLaunch
+
+  if ! xcrun simctl list runtimes | grep -q "iOS"; then
+    # Downloads the latest iOS simulator runtime (also several GB)
+    xcodebuild -downloadPlatform iOS
+  else
+    less_fancy_echo "... iOS simulator runtime already installed"
+  fi
+else
+  less_fancy_echo "Xcode isn't installed, so skipping the iOS Simulator."
+  less_fancy_echo "Run 'xcodes install --latest --select', then re-run this script."
+fi
+
+# ---------------------------------------------------------------------------
+fancy_echo "Initializing SSH key ..."
+if [ ! -f ~/.ssh/id_ed25519 ]; then
+  mkdir -p ~/.ssh
+  ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N '' -C "$USER@$(hostname -s)"
+fi
+
+# ---------------------------------------------------------------------------
+fancy_echo "Configuring diff-so-fancy ..."
+git config --file ~/.gitconfig.local core.pager "diff-so-fancy | less --tabs=4 -RFX"
+git config --file ~/.gitconfig.local color.ui true
+
+git config --file ~/.gitconfig.local color.diff-highlight.oldNormal    "red bold"
+git config --file ~/.gitconfig.local color.diff-highlight.oldHighlight "red bold 52"
+git config --file ~/.gitconfig.local color.diff-highlight.newNormal    "green bold"
+git config --file ~/.gitconfig.local color.diff-highlight.newHighlight "green bold 22"
+
+git config --file ~/.gitconfig.local color.diff.meta       "11"
+git config --file ~/.gitconfig.local color.diff.frag       "magenta bold"
+git config --file ~/.gitconfig.local color.diff.commit     "yellow bold"
+git config --file ~/.gitconfig.local color.diff.old        "red bold"
+git config --file ~/.gitconfig.local color.diff.new        "green bold"
+git config --file ~/.gitconfig.local color.diff.whitespace "red reverse"
+
+# ---------------------------------------------------------------------------
+fancy_echo "Installing base16-shell ..."
 git_clone https://github.com/chriskempson/base16-shell.git ~/.config/base16-shell
 
-grep -qF -- "# Base16 Shell" ~/.zshrc || cat <<EOF >> ~/.zshrc
+grep -qF -- "# Base16 Shell" ~/.zshrc || cat <<'EOF' >> ~/.zshrc
+
 # Base16 Shell
 BASE16_SHELL="$HOME/.config/base16-shell/"
 [ -n "$PS1" ] && \
@@ -199,22 +281,98 @@ BASE16_SHELL="$HOME/.config/base16-shell/"
         eval "$("$BASE16_SHELL/profile_helper.sh")"
 EOF
 
-fancy_echo "cloning dotfiles"
-mkdir -p Workspace
+# ---------------------------------------------------------------------------
+fancy_echo "Cloning dotfiles ..."
+mkdir -p ~/Workspace
 git_clone https://github.com/thoughtbot/dotfiles.git ~/Workspace/dotfiles
 git_clone https://github.com/ryanong/vim-bootstrap.git ~/Workspace/vim-bootstrap
 
-fancy_echo "writing rcm settings"
+fancy_echo "Writing rcm settings ..."
 cat <<EOF > "$HOME/.rcrc"
-EXCLUDES="README*.md LICENSE zsh* rcrc Brewfile vimrc.bundles vim/* init.vim"
+EXCLUDES="README*.md LICENSE zsh* rcrc Brewfile vimrc.bundles vim/* init.vim gitconfig"
 DOTFILES_DIRS="$HOME/Workspace/vim-bootstrap $HOME/Workspace/dotfiles"
 EOF
 
-fancy_echo "running rcup"
+fancy_echo "Running rcup ..."
 rcup -K
 
-fancy_echo "installing vim plugins "
+fancy_echo "Installing vim plugins ..."
 sh ~/Workspace/vim-bootstrap/hooks/post-up
 
-touch "$HOME"/.psqlrc.local
+# ---------------------------------------------------------------------------
+# Personal settings from this repo: .gitconfig, iTerm colors, VS Code profile,
+# LinearMouse. Cloned over https because the SSH key isn't on GitHub yet.
+LAPTOP_DIR="$HOME/Workspace/laptop"
+git_clone https://github.com/rowin1/laptop.git "$LAPTOP_DIR"
+git -C "$LAPTOP_DIR" pull --ff-only --quiet || less_fancy_echo "... couldn't update $LAPTOP_DIR, using it as is"
 
+# Copies $1 to $2, backing up $2 first if it's a different file.
+install_file() {
+  if [ -f "$2" ] && [ ! -L "$2" ] && ! cmp -s "$1" "$2"; then
+    cp "$2" "$2.bak.$(date +%Y%m%d%H%M%S)"
+  fi
+  rm -f "$2"
+  cp "$1" "$2"
+}
+
+fancy_echo "Installing .gitconfig ..."
+# Replaces the thoughtbot symlink. Machine-specific settings (like the
+# diff-so-fancy ones above) live in ~/.gitconfig.local, which it includes.
+install_file "$LAPTOP_DIR/.gitconfig" "$HOME/.gitconfig"
+
+fancy_echo "Installing the Doom color scheme for iTerm2 ..."
+# A dynamic profile named "Doom" using Doom.itermcolors, set as the default.
+DOOM_GUID="05FC50B4-F1F5-491C-AF74-4201F62107EF"
+ITERM_PROFILES="$HOME/Library/Application Support/iTerm2/DynamicProfiles"
+mkdir -p "$ITERM_PROFILES"
+doom_tmp="$(mktemp)"
+cp "$LAPTOP_DIR/Doom.itermcolors" "$doom_tmp"
+plutil -insert Name -string "Doom" "$doom_tmp"
+plutil -insert Guid -string "$DOOM_GUID" "$doom_tmp"
+printf '{"Profiles":[%s]}\n' "$(plutil -convert json -o - "$doom_tmp")" > "$ITERM_PROFILES/Doom.json"
+rm -f "$doom_tmp"
+defaults write com.googlecode.iterm2 "Default Bookmark Guid" -string "$DOOM_GUID"
+
+fancy_echo "Applying the rowin1 VS Code profile ..."
+# The .code-profile export nests JSON inside JSON strings; plutil unwraps it.
+VSCODE_PROFILE="$LAPTOP_DIR/rowin1.code-profile"
+VSCODE_USER="$HOME/Library/Application Support/Code/User"
+mkdir -p "$VSCODE_USER"
+vscode_tmp="$(mktemp)"
+plutil -extract settings raw -o - "$VSCODE_PROFILE" \
+  | plutil -extract settings raw -o - - > "$vscode_tmp"
+install_file "$vscode_tmp" "$VSCODE_USER/settings.json"
+plutil -extract extensions raw -o - "$VSCODE_PROFILE" > "$vscode_tmp"
+installed_extensions="$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+i=0
+while ext=$(plutil -extract "$i.identifier.id" raw -o - "$vscode_tmp" 2>/dev/null); do
+  if ! printf '%s\n' "$installed_extensions" | grep -qx "$(printf '%s' "$ext" | tr '[:upper:]' '[:lower:]')"; then
+    code --install-extension "$ext" --force > /dev/null || less_fancy_echo "... couldn't install $ext"
+  fi
+  i=$((i + 1))
+done
+rm -f "$vscode_tmp"
+
+fancy_echo "Disabling mouse acceleration in LinearMouse ..."
+LINEARMOUSE_CONFIG="$HOME/.config/linearmouse/linearmouse.json"
+if [ ! -f "$LINEARMOUSE_CONFIG" ]; then
+  mkdir -p "$(dirname "$LINEARMOUSE_CONFIG")"
+  cat <<'EOF' > "$LINEARMOUSE_CONFIG"
+{
+  "schemes": [
+    {
+      "if": { "device": { "category": "mouse" } },
+      "pointer": { "disableAcceleration": true }
+    }
+  ]
+}
+EOF
+else
+  less_fancy_echo "... $LINEARMOUSE_CONFIG already exists, leaving it alone"
+fi
+
+fancy_echo "Done! Open a new terminal window, then:"
+less_fancy_echo "  - add ~/.ssh/id_ed25519.pub to GitHub (gh auth login can do this)"
+less_fancy_echo "  - run 'claude' to log in to Claude Code"
+less_fancy_echo "  - open LinearMouse and grant it Accessibility access so it can apply its config"
+less_fancy_echo "  - quit and reopen iTerm2 to pick up the Doom profile"
