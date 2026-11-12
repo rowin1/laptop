@@ -60,7 +60,7 @@ VS Code profile by hand any more. The `mac` script does it (see below).
 * Node (latest LTS, via fnm), Python (via uv), yarn
 * Claude Code
 * Xcode (via xcodes) and the iOS Simulator
-* git, gh, diff-so-fancy, neovim, ripgrep, fd, fzf, bat, eza, tmux and more
+* git, gh, diff-so-fancy, ffmpeg, neovim, ripgrep, fd, fzf, bat, eza, tmux and more
 * apps: caffeine, docker, firefox, iterm2, itsycal, linearmouse, rectangle, slack, textmate, visual studio code
 * https://github.com/thoughtbot/dotfiles and https://github.com/ryanong/vim-bootstrap (via rcm)
 * files from this repo:
